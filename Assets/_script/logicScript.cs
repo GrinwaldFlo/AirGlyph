@@ -4,19 +4,31 @@ using System.Collections;
 using System.Collections.Generic;
 using NDream.AirConsole;
 using Newtonsoft.Json.Linq;
+using System;
 
 public class logicScript : MonoBehaviour
 {
 	public GameObject introCanvas;
 	public GameObject readyCanvas;
+	public GameObject playCanvas;
 	public GameObject endCanvas;
+	public GameObject uiPlayLeft;
+	public GameObject uiPlayRight;
+	public GameObject prefabPlayer;
+
+	public GameObject introScene;
+	public GameObject tellFirstScene;
+
+	public Text txtLastGlyph;
+	public Text txtMessage;
 
 	private float timeStateChange;
 
-	private playerScript[] lstPlayer = new playerScript[Gvar.nbPlayerMax];
+	public playerScript[] lstPlayer = new playerScript[Gvar.nbPlayerMax];
 
 	public delegate void StateChangeAction();
 	public static event StateChangeAction OnStateChange;
+	public int currentPlayer = -1;
 
 
 	void Awake()
@@ -38,6 +50,8 @@ public class logicScript : MonoBehaviour
 	private void init()
 	{
 		setGameState(enGameState.Intro);
+
+		Gvar.generateGlyph();
 	}
 
 	private void setGameState(enGameState state)
@@ -55,21 +69,27 @@ public class logicScript : MonoBehaviour
 				case enGameState.Intro:
 					introCanvas.SetActive(true);
 					readyCanvas.SetActive(false);
+					playCanvas.SetActive(false);
 					endCanvas.SetActive(false);
+					introScene.SetActive(true);
+					tellFirstScene.SetActive(false);
 					break;
 				case enGameState.Ready:
 					introCanvas.SetActive(false);
 					readyCanvas.SetActive(true);
+					playCanvas.SetActive(false);
 					endCanvas.SetActive(false);
 					break;
 				case enGameState.Play:
 					introCanvas.SetActive(false);
 					readyCanvas.SetActive(false);
 					endCanvas.SetActive(false);
+					introScene.SetActive(false);
 					break;
 				case enGameState.End:
 					introCanvas.SetActive(false);
 					readyCanvas.SetActive(false);
+					playCanvas.SetActive(false);
 					endCanvas.SetActive(true);
 					break;
 				default:
@@ -78,7 +98,38 @@ public class logicScript : MonoBehaviour
 		}
 	}
 
+	internal void setNextPlayer()
+	{
+		setNextPlayerId();
 
+		for (int i = 0; i < lstPlayer.Length; i++)
+		{
+			if(lstPlayer[i] != null)
+			{
+				lstPlayer[i].setActive(i == currentPlayer);
+			}
+		}
+	}
+
+	private void setNextPlayerId()
+	{
+		for (int i = currentPlayer + 1; i < lstPlayer.Length; i++)
+		{
+			if (lstPlayer[i] != null)
+			{ 
+				currentPlayer = i;
+				return;
+			}
+		}
+		for (int i = 0; i < lstPlayer.Length; i++)
+		{
+			if (lstPlayer[i] != null)
+			{
+				currentPlayer = i;
+				return;
+			}
+		}
+	}
 
 	private void Instance_onMessage(int from, JToken data)
 	{
@@ -90,49 +141,90 @@ public class logicScript : MonoBehaviour
 			return;
 		}
 
-		//if (data["swipeanalog-right"] != null)
-		//{
-		//	if (data["swipeanalog-right"].Value<bool>("pressed") == true)
-		//	{
-		//		if (Gvar.gameState == enGameState.Intro)
-		//			setGameState(enGameState.Ready);
-		//		if (Gvar.gameState == enGameState.End && Time.time - timeStateChange > 2f)
-		//			setGameState(enGameState.Intro);
-		//		//				float x = data["swipeanalog-right"]["message"].Value<float>("x");
-		//		//				float y = data["swipeanalog-right"]["message"].Value<float>("y");
-		//		//				double a = data["swipeanalog-right"]["message"].Value<double>("angle");
-		//		float d = data["swipeanalog-right"]["message"].Value<float>("degree");
+		msgResponse r = lstPlayer[numPlayer].treatMessage(data);
 
-		//		Debug.Log("Swipe " + d);
-		//		lstPlayer[numPlayer].askThrow(d);
-		//	}
-		//}
-		//else if (data["joystick-left"] != null)
-		//{
-		//	if (data["joystick-left"].Value<bool>("pressed") == true)
-		//	{
-		//		float x1 = data["joystick-left"]["message"].Value<float>("x");
-		//		float y1 = data["joystick-left"]["message"].Value<float>("y");
+		switch (Gvar.gameState)
+		{
+			case enGameState.None:
+				break;
+			case enGameState.Intro:
+				if (r == msgResponse.GoodGlyph)
+					treatIntro(lstPlayer[numPlayer].lastGlyph.name);
+				break;
+			case enGameState.Ready:
+				break;
+			case enGameState.Play:
+				treatPlay(r == msgResponse.GoodGlyph, lstPlayer[numPlayer]);
+				break;
+			case enGameState.End:
+				break;
+			default:
+				break;
+		}
+	}
 
-		//		lstPlayer[numPlayer].move(x1, y1);
-		//		//Debug.Log("Joy " + x1 + " " + y1 + " ");
-		//	}
-		//	else
-		//	{
-		//		lstPlayer[numPlayer].stopMove();
-		//	}
-		//}
-		//else
-		//{
-		//	//Debug.Log("Message from " + numPlayer + " " + data.ToString());
+	private void treatPlay(bool glyphOK, playerScript curPlayer)
+	{
+		switch (Gvar.game)
+		{
+			case enGame.None:
+				break;
+			case enGame.FindSentence:
+				treatFindSentence(glyphOK, curPlayer);
+				break;
+			case enGame.TellFirst:
+				tellFirstScene.GetComponent<tellFirstScript>().treat(this, glyphOK, curPlayer);
+				break;
+			default:
+				break;
+		}
+	}
 
-		//}
+	private void treatFindSentence(bool glyphOK, playerScript curPlayer)
+	{
+		if (!curPlayer.isCurrentPlayer)
+		{
+			AirConsole.instance.Message(curPlayer.deviceId, "Not your turn");
+			return;
+		}
 
-	
+		if (!glyphOK)
+		{
+			txtLastGlyph.text = "Glyph missed";
+			setNextPlayer();
+			return;
+		}
+		else
+		{
+			txtLastGlyph.text = curPlayer.lastGlyph.name;
+		}
 
 
+		setNextPlayer();
+	}
 
+	private void treatIntro(string name)
+	{
+		if(name == "Advance")
+		{
+			setGame(enGame.TellFirst);
+		}
+	}
 
+	private void setGame(enGame newGame)
+	{
+		Gvar.game = newGame;
+		playCanvas.SetActive(true);
+		switch (newGame)
+		{
+			case enGame.TellFirst:
+				tellFirstScene.SetActive(true);
+				tellFirstScene.GetComponent<tellFirstScript>().init();
+				setGameState(enGameState.Play);
+				break;
+			default:
+				break;
+		}
 	}
 
 	private void Instance_onDisconnect(int device_id)
@@ -151,6 +243,10 @@ public class logicScript : MonoBehaviour
 			Destroy(lstPlayer[numPlayer].gameObject);
 			lstPlayer[numPlayer] = null;
 		}
+		arrangePlayer();
+
+		if(numPlayer == currentPlayer)
+			setNextPlayer();
 	}
 
 	private void Instance_onDeviceStateChange(int device_id, JToken user_data)
@@ -170,17 +266,47 @@ public class logicScript : MonoBehaviour
 		Debug.Log("Connected " + device_id);
 
 		addPlayer(device_id);
+
 	}
 
 	private void addPlayer(int device_id)
 	{
-		int numPlayer = AirConsole.instance.ConvertDeviceIdToPlayerNumber(device_id);
+		GameObject newPlayer = Instantiate(prefabPlayer);
+		playerScript newScript = newPlayer.GetComponent<playerScript>();
+		newScript.init(device_id);
+		lstPlayer[newScript.player] = newScript;
+		arrangePlayer();
 
-		//playerScript newScript = newPlayer.GetComponent<playerScript>();
-		//newScript.deviceId = device_id;
-		//newScript.player = numPlayer;
+		if (currentPlayer == -1)
+			setNextPlayer();
 
-		//lstPlayer[numPlayer] = newScript;
+		newScript.setActive(currentPlayer == newScript.player);
+	}
+
+	private void arrangePlayer()
+	{
+		List<playerScript> lstP = new List<playerScript>();
+
+		for (int i = 0; i < lstPlayer.Length; i++)
+		{
+			if (lstPlayer[i] != null)
+			{ 
+				lstP.Add(lstPlayer[i]);
+			}
+		}
+
+		lstP.Sort();
+
+		for (int i = 0; i < lstP.Count; i++)
+		{
+			if(i < 4)
+			{
+				lstP[i].transform.SetParent(uiPlayLeft.transform);
+				RectTransform r = lstP[i].GetComponent<RectTransform>();
+				r.anchoredPosition = new Vector2(0, i * -160);
+				r.localScale = new Vector3(1f, 1f, 1f);
+			}
+		}
 
 	}
 
