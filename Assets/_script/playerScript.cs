@@ -15,7 +15,8 @@ public class playerScript : MonoBehaviour, IComparable<playerScript>
 	internal string playerName;
 	public Text txtName;
 	public Text txtScore;
-	public Image backgroundImage;
+	public Text txtScoreGlob;
+	private Image backgroundImage;
 	internal bool isCurrentPlayer;
 	internal clGlyph lastGlyph;
 
@@ -32,6 +33,23 @@ public class playerScript : MonoBehaviour, IComparable<playerScript>
 			{
 				p_score = value;
 				txtScore.text = p_score.ToString();
+			}
+		}
+	}
+
+	private int p_scoreGlob;
+	public int scoreGlob
+	{
+		get
+		{
+			return p_scoreGlob;
+		}
+		set
+		{
+			if (value != scoreGlob)
+			{
+				p_scoreGlob = value;
+				txtScoreGlob.text = p_scoreGlob.ToString();
 			}
 		}
 	}

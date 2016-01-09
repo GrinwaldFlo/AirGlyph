@@ -6,7 +6,7 @@ using NDream.AirConsole;
 using Newtonsoft.Json.Linq;
 using System;
 
-public class tellFirstScript : MonoBehaviour
+public class findSentenceScript : MonoBehaviour
 {
 	private const int nbMissMax = 3;
 	private List<clGlyph> lstGlyphTellFirst = new List<clGlyph>();
@@ -44,7 +44,7 @@ public class tellFirstScript : MonoBehaviour
 			return;
 		}
 
-		if(glyph[0].glyphName != "")
+		if (glyph[0].glyphName != "")
 			pushGlyph();
 
 		if (!glyphOK)

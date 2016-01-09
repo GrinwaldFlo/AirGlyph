@@ -4,7 +4,6 @@ using System.Collections;
 using System.Collections.Generic;
 using NDream.AirConsole;
 using Newtonsoft.Json.Linq;
-using System;
 
 public class logicScript : MonoBehaviour
 {
@@ -21,6 +20,7 @@ public class logicScript : MonoBehaviour
 
 	public Text txtLastGlyph;
 	public Text txtMessage;
+	public Text txtFinalText;
 
 	private float timeStateChange;
 
@@ -30,16 +30,23 @@ public class logicScript : MonoBehaviour
 	public static event StateChangeAction OnStateChange;
 	public int currentPlayer = -1;
 
+	private class msg
+	{
+		internal const string Inactive = "#Inactive";
+		internal const string Active = "#Active";
+		internal const string Intro = "#Intro";
+		internal const string End = "#End";
+	}
 
 	void Awake()
 	{
-		init();
 		AirConsole.instance.onConnect += Instance_onConnect;
 		AirConsole.instance.onCustomDeviceStateChange += Instance_onCustomDeviceStateChange;
 		AirConsole.instance.onDeviceStateChange += Instance_onDeviceStateChange;
 		AirConsole.instance.onDisconnect += Instance_onDisconnect;
 		AirConsole.instance.onMessage += Instance_onMessage;
 		AirConsole.instance.onReady += Instance_onReady;
+		init();
 	}
 
 	private void Instance_onReady(string code)
@@ -73,6 +80,9 @@ public class logicScript : MonoBehaviour
 					endCanvas.SetActive(false);
 					introScene.SetActive(true);
 					tellFirstScene.SetActive(false);
+					setAllPlayerInactive();
+					if (AirConsole.instance.GetActivePlayerDeviceIds.Count > 0)
+						AirConsole.instance.Broadcast(msg.Intro);
 					break;
 				case enGameState.Ready:
 					introCanvas.SetActive(false);
@@ -91,6 +101,10 @@ public class logicScript : MonoBehaviour
 					readyCanvas.SetActive(false);
 					playCanvas.SetActive(false);
 					endCanvas.SetActive(true);
+					tellFirstScene.SetActive(false);
+					setAllPlayerInactive();
+					if (AirConsole.instance.GetActivePlayerDeviceIds.Count > 0)
+						AirConsole.instance.Broadcast(msg.End);
 					break;
 				default:
 					break;
@@ -104,7 +118,19 @@ public class logicScript : MonoBehaviour
 
 		for (int i = 0; i < lstPlayer.Length; i++)
 		{
-			if(lstPlayer[i] != null)
+			if (lstPlayer[i] != null)
+			{
+				lstPlayer[i].setActive(i == currentPlayer);
+			}
+		}
+	}
+
+	private void setAllPlayerInactive()
+	{
+		currentPlayer = -1;
+		for (int i = 0; i < lstPlayer.Length; i++)
+		{
+			if (lstPlayer[i] != null)
 			{
 				lstPlayer[i].setActive(i == currentPlayer);
 			}
@@ -113,10 +139,15 @@ public class logicScript : MonoBehaviour
 
 	private void setNextPlayerId()
 	{
+		if (currentPlayer == -1)
+		{
+			currentPlayer = Mathf.CeilToInt(Random.Range(0, lstPlayer.Length));
+		}
+
 		for (int i = currentPlayer + 1; i < lstPlayer.Length; i++)
 		{
 			if (lstPlayer[i] != null)
-			{ 
+			{
 				currentPlayer = i;
 				return;
 			}
@@ -157,6 +188,8 @@ public class logicScript : MonoBehaviour
 				treatPlay(r == msgResponse.GoodGlyph, lstPlayer[numPlayer]);
 				break;
 			case enGameState.End:
+				if (r == msgResponse.GoodGlyph && lstPlayer[numPlayer].lastGlyph.name == "More")
+					setGameState(enGameState.Intro);
 				break;
 			default:
 				break;
@@ -205,19 +238,40 @@ public class logicScript : MonoBehaviour
 
 	private void treatIntro(string name)
 	{
-		if(name == "Advance")
+		if (name == "Advance")
 		{
 			setGame(enGame.TellFirst);
+		}
+	}
+
+	private void resetPlayerScore()
+	{
+		for (int i = 0; i < lstPlayer.Length; i++)
+		{
+			if (lstPlayer[i] != null)
+			{
+				lstPlayer[i].score = 0;
+			}
 		}
 	}
 
 	private void setGame(enGame newGame)
 	{
 		Gvar.game = newGame;
+		setAllPlayerInactive();
+		resetPlayerScore();
+
 		playCanvas.SetActive(true);
 		switch (newGame)
 		{
 			case enGame.TellFirst:
+				txtMessage.text = "Glyph only glyph that has not be glyphed";
+				tellFirstScene.SetActive(true);
+				tellFirstScene.GetComponent<tellFirstScript>().init();
+				setGameState(enGameState.Play);
+				break;
+			case enGame.FindSentence:
+				txtMessage.text = "Glyph existing sentences. If you think there are no possibilities, glyph Less";
 				tellFirstScene.SetActive(true);
 				tellFirstScene.GetComponent<tellFirstScript>().init();
 				setGameState(enGameState.Play);
@@ -225,6 +279,30 @@ public class logicScript : MonoBehaviour
 			default:
 				break;
 		}
+	}
+
+	internal void setGameEnd()
+	{
+		int maxScore = 0;
+		playerScript winner = null;
+		for (int i = 0; i < lstPlayer.Length; i++)
+		{
+			if (lstPlayer[i] != null)
+			{
+				Debug.Log("Player " + i + " " + lstPlayer[i].playerName + " s:" + lstPlayer[i].score);
+				if (lstPlayer[i].score > maxScore)
+					winner = lstPlayer[i];
+
+				lstPlayer[i].scoreGlob += lstPlayer[i].score;
+			}
+		}
+
+		if (winner != null)
+			txtFinalText.text = winner.playerName + " Win ! with " + winner.score + " points";
+		else
+			txtFinalText.text = "No winner, shame on you !";
+
+		setGameState(enGameState.End);
 	}
 
 	private void Instance_onDisconnect(int device_id)
@@ -245,7 +323,7 @@ public class logicScript : MonoBehaviour
 		}
 		arrangePlayer();
 
-		if(numPlayer == currentPlayer)
+		if (numPlayer == currentPlayer)
 			setNextPlayer();
 	}
 
@@ -267,6 +345,10 @@ public class logicScript : MonoBehaviour
 
 		addPlayer(device_id);
 
+		if (Gvar.gameState == enGameState.Intro)
+			AirConsole.instance.Message(device_id, msg.Intro);
+		else
+			AirConsole.instance.Message(device_id, msg.Inactive);
 	}
 
 	private void addPlayer(int device_id)
@@ -277,8 +359,8 @@ public class logicScript : MonoBehaviour
 		lstPlayer[newScript.player] = newScript;
 		arrangePlayer();
 
-		if (currentPlayer == -1)
-			setNextPlayer();
+		//if (currentPlayer == -1)
+		//	setNextPlayer();
 
 		newScript.setActive(currentPlayer == newScript.player);
 	}
@@ -290,7 +372,7 @@ public class logicScript : MonoBehaviour
 		for (int i = 0; i < lstPlayer.Length; i++)
 		{
 			if (lstPlayer[i] != null)
-			{ 
+			{
 				lstP.Add(lstPlayer[i]);
 			}
 		}
@@ -299,7 +381,7 @@ public class logicScript : MonoBehaviour
 
 		for (int i = 0; i < lstP.Count; i++)
 		{
-			if(i < 4)
+			if (i < 4)
 			{
 				lstP[i].transform.SetParent(uiPlayLeft.transform);
 				RectTransform r = lstP[i].GetComponent<RectTransform>();
@@ -320,7 +402,10 @@ public class logicScript : MonoBehaviour
 	// Update is called once per frame
 	void Update()
 	{
-	
+		if (Gvar.gameState == enGameState.Play && Time.time - timeStateChange > 1 && currentPlayer == -1)
+		{
+			setNextPlayer();
+		}
 	}
 
 	public void FixedUpdate()
