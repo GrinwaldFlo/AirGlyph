@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using NDream.AirConsole;
 using Newtonsoft.Json.Linq;
+using System;
 
 public class logicScript : MonoBehaviour
 {
@@ -17,9 +18,12 @@ public class logicScript : MonoBehaviour
 
 	public GameObject introScene;
 	public GameObject tellFirstScene;
+	public GameObject findSentenceScene;
 
 	public Text txtLastGlyph;
 	public Text txtMessage;
+	public Text txtMessage2;
+	public Text txtHelp;
 	public Text txtFinalText;
 
 	private float timeStateChange;
@@ -30,13 +34,6 @@ public class logicScript : MonoBehaviour
 	public static event StateChangeAction OnStateChange;
 	public int currentPlayer = -1;
 
-	private class msg
-	{
-		internal const string Inactive = "#Inactive";
-		internal const string Active = "#Active";
-		internal const string Intro = "#Intro";
-		internal const string End = "#End";
-	}
 
 	void Awake()
 	{
@@ -80,9 +77,13 @@ public class logicScript : MonoBehaviour
 					endCanvas.SetActive(false);
 					introScene.SetActive(true);
 					tellFirstScene.SetActive(false);
+					findSentenceScene.SetActive(false);
 					setAllPlayerInactive();
 					if (AirConsole.instance.GetActivePlayerDeviceIds.Count > 0)
-						AirConsole.instance.Broadcast(msg.Intro);
+					{
+						AirConsole.instance.Broadcast(Cmd.Active);
+						AirConsole.instance.Broadcast(Lng.Intro);
+					}
 					break;
 				case enGameState.Ready:
 					introCanvas.SetActive(false);
@@ -102,9 +103,14 @@ public class logicScript : MonoBehaviour
 					playCanvas.SetActive(false);
 					endCanvas.SetActive(true);
 					tellFirstScene.SetActive(false);
+					findSentenceScene.SetActive(false);
 					setAllPlayerInactive();
 					if (AirConsole.instance.GetActivePlayerDeviceIds.Count > 0)
-						AirConsole.instance.Broadcast(msg.End);
+					{
+						AirConsole.instance.Broadcast(Cmd.Active);
+						AirConsole.instance.Broadcast(Lng.End);
+					}
+						
 					break;
 				default:
 					break;
@@ -141,7 +147,7 @@ public class logicScript : MonoBehaviour
 	{
 		if (currentPlayer == -1)
 		{
-			currentPlayer = Mathf.CeilToInt(Random.Range(0, lstPlayer.Length));
+			currentPlayer = Mathf.CeilToInt(UnityEngine.Random.Range(0, lstPlayer.Length));
 		}
 
 		for (int i = currentPlayer + 1; i < lstPlayer.Length; i++)
@@ -188,7 +194,7 @@ public class logicScript : MonoBehaviour
 				treatPlay(r == msgResponse.GoodGlyph, lstPlayer[numPlayer]);
 				break;
 			case enGameState.End:
-				if (r == msgResponse.GoodGlyph && lstPlayer[numPlayer].lastGlyph.name == "More")
+				if (r == msgResponse.GoodGlyph && lstPlayer[numPlayer].lastGlyph.name == Gvar.glyphNext)
 					setGameState(enGameState.Intro);
 				break;
 			default:
@@ -203,45 +209,22 @@ public class logicScript : MonoBehaviour
 			case enGame.None:
 				break;
 			case enGame.FindSentence:
-				treatFindSentence(glyphOK, curPlayer);
+				findSentenceScene.GetComponent<findSentenceScript>().treat(glyphOK, curPlayer);
 				break;
 			case enGame.TellFirst:
-				tellFirstScene.GetComponent<tellFirstScript>().treat(this, glyphOK, curPlayer);
+				tellFirstScene.GetComponent<tellFirstScript>().treat(glyphOK, curPlayer);
 				break;
 			default:
 				break;
 		}
 	}
 
-	private void treatFindSentence(bool glyphOK, playerScript curPlayer)
-	{
-		if (!curPlayer.isCurrentPlayer)
-		{
-			AirConsole.instance.Message(curPlayer.deviceId, "Not your turn");
-			return;
-		}
-
-		if (!glyphOK)
-		{
-			txtLastGlyph.text = "Glyph missed";
-			setNextPlayer();
-			return;
-		}
-		else
-		{
-			txtLastGlyph.text = curPlayer.lastGlyph.name;
-		}
-
-
-		setNextPlayer();
-	}
-
 	private void treatIntro(string name)
 	{
 		if (name == "Advance")
-		{
 			setGame(enGame.TellFirst);
-		}
+		else if (name == "Courage")
+			setGame(enGame.FindSentence);
 	}
 
 	private void resetPlayerScore()
@@ -260,20 +243,22 @@ public class logicScript : MonoBehaviour
 		Gvar.game = newGame;
 		setAllPlayerInactive();
 		resetPlayerScore();
-
+		txtLastGlyph.text = "";
+		txtMessage.text = "";
+		txtMessage2.text = "";
 		playCanvas.SetActive(true);
 		switch (newGame)
 		{
 			case enGame.TellFirst:
-				txtMessage.text = "Glyph only glyph that has not be glyphed";
+				txtHelp.text = Lng.TellFirstHelp;
 				tellFirstScene.SetActive(true);
-				tellFirstScene.GetComponent<tellFirstScript>().init();
+				tellFirstScene.GetComponent<tellFirstScript>().init(this);
 				setGameState(enGameState.Play);
 				break;
 			case enGame.FindSentence:
-				txtMessage.text = "Glyph existing sentences. If you think there are no possibilities, glyph Less";
-				tellFirstScene.SetActive(true);
-				tellFirstScene.GetComponent<tellFirstScript>().init();
+				txtHelp.text = Lng.FindSequenceHelp;
+				findSentenceScene.SetActive(true);
+				findSentenceScene.GetComponent<findSentenceScript>().init(this);
 				setGameState(enGameState.Play);
 				break;
 			default:
@@ -283,24 +268,26 @@ public class logicScript : MonoBehaviour
 
 	internal void setGameEnd()
 	{
-		int maxScore = 0;
 		playerScript winner = null;
+		List<playerScript> lst = new List<playerScript>();
 		for (int i = 0; i < lstPlayer.Length; i++)
 		{
 			if (lstPlayer[i] != null)
-			{
-				Debug.Log("Player " + i + " " + lstPlayer[i].playerName + " s:" + lstPlayer[i].score);
-				if (lstPlayer[i].score > maxScore)
-					winner = lstPlayer[i];
-
-				lstPlayer[i].scoreGlob += lstPlayer[i].score;
-			}
+				lst.Add(lstPlayer[i]);
 		}
 
+		lst.Sort();
+
+		for (int i = 0; i < lst.Count; i++)
+		{
+			lst[i].scoreGlob += lst.Count - i - 1;
+		}
+		winner = lst[0];
+
 		if (winner != null)
-			txtFinalText.text = winner.playerName + " Win ! with " + winner.score + " points";
+			txtFinalText.text = String.Format(Lng.Win, winner.playerName, winner.score);
 		else
-			txtFinalText.text = "No winner, shame on you !";
+			txtFinalText.text = Lng.Lose;
 
 		setGameState(enGameState.End);
 	}
@@ -346,9 +333,15 @@ public class logicScript : MonoBehaviour
 		addPlayer(device_id);
 
 		if (Gvar.gameState == enGameState.Intro)
-			AirConsole.instance.Message(device_id, msg.Intro);
+		{
+			AirConsole.instance.Message(device_id, Cmd.Active);
+			AirConsole.instance.Message(device_id, Lng.Intro);
+		}
 		else
-			AirConsole.instance.Message(device_id, msg.Inactive);
+		{ 
+			AirConsole.instance.Message(device_id, Cmd.Inactive);
+			AirConsole.instance.Message(device_id, Lng.Wait);
+		}
 	}
 
 	private void addPlayer(int device_id)

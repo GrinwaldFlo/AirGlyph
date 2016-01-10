@@ -8,92 +8,198 @@ using System;
 
 public class findSentenceScript : MonoBehaviour
 {
-	private const int nbMissMax = 3;
-	private List<clGlyph> lstGlyphTellFirst = new List<clGlyph>();
-	private glyphScript[] glyph = new glyphScript[3];
-	private int scoreInc = 1;
+	private const int nbMissMax = 5;
+	private List<clPhrase> lstPhrase = new List<clPhrase>();
+	public glyphScript[] glyph = new glyphScript[5];
 	private int nbMiss = 0;
+	private List<clGlyph> curPhrase = new List<clGlyph>();
 
-	// Use this for initialization
-	void Start()
+	private bool isEnd = false;
+	private float timeEnd;
+	private logicScript logic;
+
+	void Awake()
 	{
 		for (int i = 0; i < glyph.Length; i++)
 		{
-			glyph[i] = transform.GetChild(i).GetComponent<glyphScript>();
+			glyph[i] = transform.GetChild(0).GetChild(i).GetComponent<glyphScript>();
 		}
+		resetGlyph();
 	}
 
 	// Update is called once per frame
 	void Update()
 	{
-
+		if(isEnd && Time.time - timeEnd > 5)
+		{
+			logic.setGameEnd();
+		}
 	}
 
-	internal void init()
+	internal void init(logicScript logic)
 	{
+		this.logic = logic;
 		gameObject.SetActive(true);
-		lstGlyphTellFirst = new List<clGlyph>();
-		lstGlyphTellFirst.AddRange(Gvar.lstGlyph);
+		lstPhrase = new List<clPhrase>();
+		lstPhrase.AddRange(Gvar.lstPhrase);
+		resetGlyph();
+		curPhrase.Clear();
+		nbMiss = 0;
+		isEnd = false;
 	}
 
-	internal void treat(logicScript logicScript, bool glyphOK, playerScript curPlayer)
+	private void resetGlyph()
+	{
+		for (int i = 0; i < glyph.Length; i++)
+		{
+			if (glyph[i] == null)
+				Debug.Log("Glyph null " + i);
+			else
+				glyph[i].glyphName = glyphScript.NoGlyph;
+		}
+	}
+
+	internal void treat( bool glyphOK, playerScript curPlayer)
 	{
 		if (!curPlayer.isCurrentPlayer)
 		{
-			AirConsole.instance.Message(curPlayer.deviceId, "Not your turn");
+			AirConsole.instance.Message(curPlayer.deviceId, Lng.NotYourTurn);
 			return;
 		}
-
-		if (glyph[0].glyphName != "")
-			pushGlyph();
 
 		if (!glyphOK)
 		{
-			glyph[0].glyphName = "";
 			curPlayer.score--;
-			logicScript.setNextPlayer();
-			nbMiss++;
+			logic.txtLastGlyph.text = Lng.NotAGlyph;
 
 			if (nbMiss == nbMissMax)
-				logicScript.setGameEnd();
-
-			logicScript.txtLastGlyph.text = "???";
-			logicScript.txtMessage.text = "Glyph missed\r\n" + (nbMissMax - nbMiss) + " remaining tries";
+			{
+				askEnd();
+			}
+			else
+			{
+				nbMiss++;
+				logic.setNextPlayer();
+				logic.txtMessage.text = string.Format(Lng.GlyphMissed, (nbMissMax - nbMiss));
+			}
 			return;
 		}
+		logic.txtLastGlyph.text = curPlayer.lastGlyph.name;
 
-		int foundIndex = lstGlyphTellFirst.FindIndex(x => x.name == curPlayer.lastGlyph.name);
+		curPhrase.Add(curPlayer.lastGlyph);
 
-		if (foundIndex != -1)
+		int found = findSentence();
+
+		if (found == -1)
 		{
-			nbMiss = 0;
-			logicScript.txtMessage.text = "Good !";
-			lstGlyphTellFirst.RemoveAt(foundIndex);
-			curPlayer.score += scoreInc;
-			scoreInc++;
+			nbMiss++;
+			if (nbMiss == nbMissMax)
+			{
+				askEnd();
+				return;
+			}
+			logic.txtMessage.text = string.Format(Lng.NotASequence,  (nbMissMax - nbMiss));
 		}
 		else
 		{
-			nbMiss++;
-			if (nbMiss == nbMissMax)
-				logicScript.setGameEnd();
-
-			logicScript.txtMessage.text = "Already written !\r\n" + (nbMissMax - nbMiss) + " remaining tries";
+			nbMiss = 0;
+			curPlayer.score += (curPhrase.Count) * 2;
+			if (found >= 1000 || curPhrase.Count == 5)
+			{
+				if (found >= 1000)
+					found -= 1000;
+				lstPhrase.RemoveAt(found);
+				logic.txtMessage.text = Lng.SequenceOK;
+				logic.txtMessage2.text = string.Format(Lng.SequenceRemaining, lstPhrase.Count);
+				curPhrase.Clear();
+			}
+			else
+			{
+				logic.txtMessage.text = Lng.SequenceGlyphOK;
+			}
 		}
 
-		logicScript.txtLastGlyph.text = curPlayer.lastGlyph.name;
-		glyph[0].glyphName = curPlayer.lastGlyph.names[0];
-
-
-		logicScript.setNextPlayer();
+		updGlyph();
+		logic.setNextPlayer();
 	}
 
-	private void pushGlyph()
+	private void askEnd()
 	{
-		for (int i = glyph.Length - 1; i > 0; i--)
+		isEnd = true;
+		timeEnd = Time.time;
+		logic.txtMessage.text = Lng.SequenceLose;
+
+		clGlyph[] tmp = curPhrase.ToArray();
+		for (int i = 0; i < curPhrase.Count; i++)
 		{
-			glyph[i].glyphName = glyph[i - 1].glyphName;
+			Debug.Log("Phrase " + curPhrase[i].name);
 		}
-		glyph[0].glyphName = "";
+		for (int i = 0; i < lstPhrase.Count; i++)
+		{
+			if (lstPhrase[i].contains(tmp))
+			{
+				Debug.Log("Found phrase");
+				for (int j = 0; j < glyph.Length; j++)
+				{
+					if (lstPhrase[i].phrase.Length > j)
+					{
+						glyph[j].glyphName = lstPhrase[i].phrase[j].names[0];
+					}
+					else
+						glyph[j].glyphName = glyphScript.NoGlyph;
+					
+				}
+				break;
+			}
+		}
 	}
+
+	private void updGlyph()
+	{
+		for (int i = 0; i < glyph.Length; i++)
+		{
+			if (glyph[i] == null)
+				Debug.Log("Upd Glyph null " + i);
+			else
+			{
+				if (curPhrase.Count <= i)
+					glyph[i].glyphName = glyphScript.NoGlyph;
+				else
+					glyph[i].glyphName = curPhrase[i].names[0];
+			}
+		}
+	}
+
+	private int findSentence()
+	{
+		clGlyph[] tmp = curPhrase.ToArray();
+		for (int i = 0; i < lstPhrase.Count; i++)
+		{
+			if (lstPhrase[i].contains(tmp))
+			{
+				return i;
+			}
+		}
+
+		if (curPhrase.Count < 3 || !curPhrase[curPhrase.Count - 1].hasName(Gvar.glyphEnd))
+		{
+			curPhrase.RemoveAt(curPhrase.Count - 1);
+			return -1;
+		}
+
+		curPhrase.RemoveAt(curPhrase.Count - 1);
+		tmp = curPhrase.ToArray();
+
+		for (int i = 0; i < lstPhrase.Count; i++)
+		{
+			if (lstPhrase[i].Equals(tmp))
+			{
+				return 1000 + i;
+			}
+		}
+
+		return -1;
+	}
+
+
 }

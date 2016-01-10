@@ -98,8 +98,8 @@ SwipePattern.prototype = {
 
 	checkResize: function (most_right_circle, most_bottom_circle)
 	{
-		var need_width = most_right_circle.x + most_right_circle.radius + 10;
-		var need_height = most_bottom_circle.y + most_bottom_circle.radius + 10;
+		var need_width = most_right_circle.x + most_right_circle.radius + 30;
+		var need_height = most_bottom_circle.y + most_bottom_circle.radius + 30;
 		var container_rect = this.container.getBoundingClientRect();
 		var parent_rect = container_rect;
 		// We need to scale

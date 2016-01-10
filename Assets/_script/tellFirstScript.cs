@@ -4,18 +4,19 @@ using System.Collections;
 using System.Collections.Generic;
 using NDream.AirConsole;
 using Newtonsoft.Json.Linq;
-using System;
 
 public class tellFirstScript : MonoBehaviour
 {
-	private const int nbMissMax = 3;
+	private const int nbMissMax = 5;
 	private List<clGlyph> lstGlyphTellFirst = new List<clGlyph>();
 	private glyphScript[] glyph = new glyphScript[3];
 	private int scoreInc = 1;
 	private int nbMiss = 0;
+	private logicScript logic;
+	private bool endPhase;
+	private float lastTime;
 
-	// Use this for initialization
-	void Start()
+	void Awake()
 	{
 		for (int i = 0; i < glyph.Length; i++)
 		{
@@ -26,21 +27,49 @@ public class tellFirstScript : MonoBehaviour
 	// Update is called once per frame
 	void Update()
 	{
-
+		if(endPhase)
+		{
+			if(Time.time - lastTime > 0.4)
+			{
+				if(lstGlyphTellFirst.Count == 0)
+				{
+					logic.setGameEnd();
+					return;
+				}
+				pushGlyph();
+				glyph[0].glyphName = lstGlyphTellFirst[0].names[0];
+				logic.txtLastGlyph.text = lstGlyphTellFirst[0].name;
+				lstGlyphTellFirst.RemoveAt(0);
+				lastTime = Time.time;
+			}
+		}
 	}
 
-	internal void init()
+	internal void init(logicScript logic)
 	{
+		this.logic = logic;
+		endPhase = false;
 		gameObject.SetActive(true);
 		lstGlyphTellFirst = new List<clGlyph>();
 		lstGlyphTellFirst.AddRange(Gvar.lstGlyph);
+		nbMiss = 0;
+		for (int i = 0; i < glyph.Length; i++)
+		{
+			glyph[i].glyphName = glyphScript.NoGlyph;
+		}
 	}
 
-	internal void treat(logicScript logicScript, bool glyphOK, playerScript curPlayer)
+	internal void treat(bool glyphOK, playerScript curPlayer)
 	{
+		if (endPhase && curPlayer.lastGlyph != null && curPlayer.lastGlyph.name == Gvar.glyphNext)
+		{ 
+			logic.setGameEnd();
+			return;
+		}
+
 		if (!curPlayer.isCurrentPlayer)
 		{
-			AirConsole.instance.Message(curPlayer.deviceId, "Not your turn");
+			AirConsole.instance.Message(curPlayer.deviceId, Lng.NotYourTurn);
 			return;
 		}
 
@@ -51,14 +80,16 @@ public class tellFirstScript : MonoBehaviour
 		{
 			glyph[0].glyphName = "";
 			curPlayer.score--;
-			logicScript.setNextPlayer();
+			logic.setNextPlayer();
 			nbMiss++;
 
 			if (nbMiss == nbMissMax)
-				logicScript.setGameEnd();
-
-			logicScript.txtLastGlyph.text = "???";
-			logicScript.txtMessage.text = "Glyph missed\r\n" + (nbMissMax - nbMiss) + " remaining tries";
+				setEndPhase();
+			else
+			{
+				logic.txtLastGlyph.text = Lng.NotAGlyph;
+				logic.txtMessage.text = string.Format(Lng.GlyphMissed, (nbMissMax - nbMiss));
+			}
 			return;
 		}
 
@@ -67,8 +98,9 @@ public class tellFirstScript : MonoBehaviour
 		if (foundIndex != -1)
 		{
 			nbMiss = 0;
-			logicScript.txtMessage.text = "Good !";
+			logic.txtMessage.text = Lng.GlyphOK;
 			lstGlyphTellFirst.RemoveAt(foundIndex);
+			logic.txtMessage2.text = string.Format(Lng.GlyphRemaining,  lstGlyphTellFirst.Count);
 			curPlayer.score += scoreInc;
 			scoreInc++;
 		}
@@ -76,16 +108,26 @@ public class tellFirstScript : MonoBehaviour
 		{
 			nbMiss++;
 			if (nbMiss == nbMissMax)
-				logicScript.setGameEnd();
-
-			logicScript.txtMessage.text = "Already written !\r\n" + (nbMissMax - nbMiss) + " remaining tries";
+				setEndPhase();
+			else
+				logic.txtMessage.text = string.Format(Lng.AlreadyWritten, (nbMissMax - nbMiss));
 		}
 
-		logicScript.txtLastGlyph.text = curPlayer.lastGlyph.name;
+		logic.txtLastGlyph.text = curPlayer.lastGlyph.name;
 		glyph[0].glyphName = curPlayer.lastGlyph.names[0];
 
 
-		logicScript.setNextPlayer();
+		logic.setNextPlayer();
+	}
+
+	private void setEndPhase()
+	{
+		lastTime = Time.time;
+		logic.txtMessage.text = Lng.GlyphMissedList;
+		logic.txtMessage2.text = Lng.Skip;
+		endPhase = true;
+		AirConsole.instance.Broadcast(Cmd.Active);
+		AirConsole.instance.Broadcast(logic.txtMessage2.text);
 	}
 
 	private void pushGlyph()
@@ -94,6 +136,6 @@ public class tellFirstScript : MonoBehaviour
 		{
 			glyph[i].glyphName = glyph[i - 1].glyphName;
 		}
-		glyph[0].glyphName = "";
+		glyph[0].glyphName = glyphScript.NoGlyph;
 	}
 }

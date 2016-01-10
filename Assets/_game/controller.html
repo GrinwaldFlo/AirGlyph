@@ -27,22 +27,10 @@
 				if (data == "#Active")
 				{
 					document.getElementById("canvas_container").style.backgroundColor = 'green';
-					document.getElementById("txthead").innerHTML = "Your turn";
 				}
 				else if (data == "#Inactive")
 				{
 					document.getElementById("canvas_container").style.backgroundColor = 'white';
-					document.getElementById("txthead").innerHTML = "Wait...";
-				}
-				else if (data == "#Intro")
-				{
-					document.getElementById("canvas_container").style.backgroundColor = 'green';
-					document.getElementById("txthead").innerHTML = "Choose game and options";
-				}
-				else if (data == "#End")
-				{
-					document.getElementById("canvas_container").style.backgroundColor = 'green';
-					document.getElementById("txthead").innerHTML = "Glyph More for intro";
 				}
 			}
 			else if (data.charAt(0) == "@")

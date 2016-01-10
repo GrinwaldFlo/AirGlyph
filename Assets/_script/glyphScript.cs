@@ -8,7 +8,7 @@ public class glyphScript : MonoBehaviour
 	public string glyphName = "";
 	private string actualGlyphName = "";
 	Dictionary<int, GameObject> lstSeg;
-
+	public const string NoGlyph = "None";
 
 	// Use this for initialization
 	void Start()
@@ -38,10 +38,16 @@ public class glyphScript : MonoBehaviour
 			}
 			else
 			{
-				foreach (KeyValuePair<int, GameObject> item in lstSeg)
-				{
-					item.Value.SetActive(true);
-				}
+				if(glyphName == NoGlyph)
+					foreach (KeyValuePair<int, GameObject> item in lstSeg)
+					{
+						item.Value.SetActive(false);
+					}
+				else
+					foreach (KeyValuePair<int, GameObject> item in lstSeg)
+					{
+						item.Value.SetActive(true);
+					}
 			}
 		}
 	}
@@ -55,7 +61,8 @@ public class glyphScript : MonoBehaviour
 
 		for (int i = 0; i < foundGlyph.pattern.Length; i++)
 		{
-			lstSeg[foundGlyph.pattern[i]].SetActive(true);
+			if(lstSeg.ContainsKey(foundGlyph.pattern[i]))
+				lstSeg[foundGlyph.pattern[i]].SetActive(true);
 		}
 	}
 }

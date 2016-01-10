@@ -134,7 +134,7 @@ public class playerScript : MonoBehaviour, IComparable<playerScript>
 
 			if(lastGlyph == null)
 			{
-				AirConsole.instance.Message(deviceId, "@Not a glyph");
+				AirConsole.instance.Message(deviceId, "@" + Lng.NotAGlyph);
 				Debug.Log(s);
 				return msgResponse.BadGlyph;
 			}
@@ -189,7 +189,21 @@ public class playerScript : MonoBehaviour, IComparable<playerScript>
 	internal void setActive(bool v)
 	{
 		isCurrentPlayer = v;
-		backgroundImage.color = v ? Color.red : Color.white;
-		AirConsole.instance.Message(deviceId, v ? "#Active" : "#Inactive");
+		if (v)
+		{
+			backgroundImage.color = v ? Color.red : Color.white;
+			AirConsole.instance.Message(deviceId, Cmd.Active);
+			AirConsole.instance.Message(deviceId, Lng.YourTurn);
+		}
+		else
+		{
+			backgroundImage.color = Color.white;
+			AirConsole.instance.Message(deviceId, Cmd.Inactive);
+			AirConsole.instance.Message(deviceId, Lng.Wait);
+
+		}
+
+
+
 	}
 }
