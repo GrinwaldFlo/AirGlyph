@@ -381,6 +381,13 @@ public class logicScript : MonoBehaviour
 				r.anchoredPosition = new Vector2(0, i * -160);
 				r.localScale = new Vector3(1f, 1f, 1f);
 			}
+			else
+			{
+				lstP[i].transform.SetParent(uiPlayRight.transform);
+				RectTransform r = lstP[i].GetComponent<RectTransform>();
+				r.anchoredPosition = new Vector2(-300, (i - 4) * -160);
+				r.localScale = new Vector3(1f, 1f, 1f);
+			}
 		}
 
 	}

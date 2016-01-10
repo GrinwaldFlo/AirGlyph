@@ -94,26 +94,27 @@ SwipePattern.prototype = {
   },
 
   checkResize: function(most_right_circle, most_bottom_circle) {
-		var need_width = most_right_circle.x + most_right_circle.radius + 30;
-		var need_height = most_bottom_circle.y + most_bottom_circle.radius + 30;
+		var need_width = most_right_circle.x + most_right_circle.radius * 2;
+		var need_height = most_bottom_circle.y + most_bottom_circle.radius * 2;
     var container_rect = this.container.getBoundingClientRect();
     var parent_rect = container_rect;
+		var containerHeight = container_rect.height - container_rect.top;
     // We need to scale
-    if (need_width > container_rect.width || need_height > container_rect.height) {
+    //if (need_width > container_rect.width || need_height > containerHeight) {
       this.canvas.width = Math.max(need_width, container_rect.width);
       this.canvas.height = Math.max(need_height, container_rect.height);
-      var scale = Math.min(container_rect.width / (need_width), container_rect.height / need_height);
+      var scale = Math.min(container_rect.width / (need_width), containerHeight / need_height);
       this.canvas.style.transformOrigin = "left top";
       this.canvas.style.webkitTransform = "scale(" + scale + ", " + scale + ")";
       this.canvas.style.transform = "scale(" + scale + ", " + scale + ")";
       this.canvas.style.msTransform = "scale(" + scale + ", " + scale + ")";
       this.canvas.style.OTransform = "scale(" + scale + ", " + scale + ")";
       this.scale = scale;
-    } else {
+  /*  } else {
       this.canvas.width = Math.min(need_width, container_rect.width);
       this.canvas.height = Math.min(need_height, container_rect.height);
       parent_rect = this.container.parentNode.getBoundingClientRect();
-    }
+    }*/
 
     var offset_y = Math.max(0, (parent_rect.height - container_rect.height) / 2);
     this.container.style.marginTop = offset_y + "px";
@@ -309,7 +310,7 @@ SwipePattern.prototype = {
         id: p.id || (i + 1),
         x: p.x,
         y: p.y,
-				radius: p.radius || 20,
+				radius: p.radius || 15,
         style: p.style || null
       };
       if (!most_bottom || p.y > most_bottom.y) {

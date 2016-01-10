@@ -468,11 +468,11 @@ internal static class Lng
 {
 	internal const string YourTurn = "Your turn";
 	internal const string Wait = "Wait";
-	internal const string Intro = "Choose game your game by glyphing";
+	internal const string Intro = "Choose your game by glyphing";
 	internal const string End = "Glyph \"" + Gvar.glyphNext + "\" to go to intro";
 	internal const string TellFirstHelp = "Glyph only glyphs that have not yet been glyphed";
 	internal const string FindSequenceHelp = "Glyph existing sequences. If you think the sequence is complete, glyph \"" + Gvar.glyphEnd + "\"\r\n3 glyphs minimum";
-	internal const string Win = "{0} win with {1} points";
+	internal const string Win = "{0} wins with {1} points";
 	internal const string Lose = "No winner, shame on you !";
 	internal const string NotYourTurn = "It's not your turn";
 	internal const string NotAGlyph = "???";
@@ -482,7 +482,7 @@ internal static class Lng
 	internal const string AlreadyWritten = "Already written !\r\n{0} remaining tries";
 	internal const string GlyphMissedList = "Here are the glyphs you missed";
 	internal const string Skip = "Glyph \"" + Gvar.glyphNext + "\" to skip";
-	internal const string NotASequence = "This is not a sequence or it's already found !\r\n{0} remaining tries";
+	internal const string NotASequence = "This is not a valid sequence or it's already been found !\r\n{0} remaining tries";
 	internal const string SequenceOK = "Good sequence!\r\nLet's start a new one";
 	internal const string SequenceRemaining = "{0} sequences remaining";
 	internal const string SequenceGlyphOK = "Good!\r\nGlyph the rest of the sequence";
