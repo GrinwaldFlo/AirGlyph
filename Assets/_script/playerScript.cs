@@ -81,7 +81,8 @@ public class playerScript : MonoBehaviour, IComparable<playerScript>
 		this.deviceId = deviceId;
 		player = AirConsole.instance.ConvertDeviceIdToPlayerNumber(deviceId);
 		playerName = AirConsole.instance.GetNickname(deviceId);
-		AirConsole.instance.Message(deviceId, "Welcome " + playerName);
+		AirConsole.instance.Message(deviceId, "Welcome");
+		AirConsole.instance.Message(deviceId, "&" + playerName);
 
 		txtName.text = playerName;
 		txtScore.text = score.ToString();

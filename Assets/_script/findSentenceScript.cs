@@ -16,6 +16,8 @@ public class findSentenceScript : MonoBehaviour
 
 	private bool isEnd = false;
 	private float timeEnd;
+	private bool isWait = false;
+	private float timeWait;
 	private logicScript logic;
 
 	void Awake()
@@ -34,6 +36,14 @@ public class findSentenceScript : MonoBehaviour
 		{
 			logic.setGameEnd();
 		}
+		if(isWait && Time.time - timeWait > 2)
+		{
+			isWait = false;
+			logic.setNextPlayer();
+			logic.txtLastGlyph.text = "";
+			curPhrase.Clear();
+			updGlyph();
+		}
 	}
 
 	internal void init(logicScript logic)
@@ -46,6 +56,7 @@ public class findSentenceScript : MonoBehaviour
 		curPhrase.Clear();
 		nbMiss = 0;
 		isEnd = false;
+		logic.txtMessage2.text = string.Format(Lng.SequenceRemaining, lstPhrase.Count);
 	}
 
 	private void resetGlyph()
@@ -111,7 +122,11 @@ public class findSentenceScript : MonoBehaviour
 				lstPhrase.RemoveAt(found);
 				logic.txtMessage.text = Lng.SequenceOK;
 				logic.txtMessage2.text = string.Format(Lng.SequenceRemaining, lstPhrase.Count);
-				curPhrase.Clear();
+
+				isWait = true;
+				timeWait = Time.time;
+				updGlyph();
+				return;
 			}
 			else
 			{
@@ -173,13 +188,38 @@ public class findSentenceScript : MonoBehaviour
 	private int findSentence()
 	{
 		clGlyph[] tmp = curPhrase.ToArray();
+		// Check if only the sequence occure only once
+		int foundId = -1;
+		int nbFound = 0;
+		for (int i = 0; i < lstPhrase.Count; i++)
+		{
+			if (lstPhrase[i].Equals(tmp))
+			{
+				nbFound++;
+				foundId = i;
+			}
+		}
+		if(nbFound == 1)
+			return 1000 + foundId;
+
+		foundId = -1;
+		nbFound = 0;
+		// Check if sequence is partial
 		for (int i = 0; i < lstPhrase.Count; i++)
 		{
 			if (lstPhrase[i].contains(tmp))
 			{
-				return i;
+				nbFound++;
+				foundId = i;
 			}
 		}
+
+		if(nbFound > 0)
+			logic.txtMessage2.text = string.Format(Lng.SequenceRemaining, lstPhrase.Count) + "\r\n" +
+				string.Format(Lng.SequenceStartWith, nbFound);
+
+		if (foundId != -1)
+			return foundId;
 
 		if (curPhrase.Count < 3 || !curPhrase[curPhrase.Count - 1].hasName(Gvar.glyphEnd))
 		{

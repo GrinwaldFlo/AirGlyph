@@ -57,13 +57,15 @@ public class tellFirstScript : MonoBehaviour
 		{
 			glyph[i].glyphName = glyphScript.NoGlyph;
 		}
+		logic.txtMessage2.text = string.Format(Lng.GlyphRemaining, lstGlyphTellFirst.Count);
 	}
 
 	internal void treat(bool glyphOK, playerScript curPlayer)
 	{
-		if (endPhase && curPlayer.lastGlyph != null && curPlayer.lastGlyph.name == Gvar.glyphNext)
+		if (endPhase)
 		{ 
-			logic.setGameEnd();
+			if (curPlayer.lastGlyph != null && curPlayer.lastGlyph.name == Gvar.glyphNext)
+				logic.setGameEnd();
 			return;
 		}
 
@@ -108,7 +110,10 @@ public class tellFirstScript : MonoBehaviour
 		{
 			nbMiss++;
 			if (nbMiss == nbMissMax)
+			{ 
 				setEndPhase();
+				return;
+			}
 			else
 				logic.txtMessage.text = string.Format(Lng.AlreadyWritten, (nbMissMax - nbMiss));
 		}

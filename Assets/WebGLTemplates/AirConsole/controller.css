@@ -11,7 +11,7 @@ body {
   box-sizing: border-box;
   position: relative;
   overflow: hidden;
-  background-color: #3b3b3b;
+  background-color: black;
   text-align: center;
   font-family: sans-serif;
   height: 100%;
@@ -28,17 +28,21 @@ body {
   display: inline-block;
 }
 
-.head{
-	background-color: #26CCCC;
-	height: 40px;
+#txtPlayer{
+	text-align: left;
+	background-color: #CC4DFF;
+	height: 20px;
+	padding: 10px
 }
 
 #txthead{
-	background-color: white;
-	height: 40px;
+	background-color: #D56BFF;
+	height: 20px;
+	padding: 10px
 }
 
 #txtglyph{
-	background-color: grey;
-	height: 40px;
+	background-color: #CC4DFF;
+	height: 20px;
+	padding: 10px
 }

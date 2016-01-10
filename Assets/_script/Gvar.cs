@@ -147,6 +147,8 @@ internal static class Gvar
 		Gvar.lstGlyph.Add(new clGlyph("Soul / Spirit / Life Force", new int[] { 409, 411, 910, 1011 }));
 		Gvar.lstGlyph.Add(new clGlyph("Stability / Stay", new int[] { 308, 509, 809 }));
 		Gvar.lstGlyph.Add(new clGlyph("Strong", new int[] { 708, 710, 809, 910 }));
+		Gvar.lstGlyph.Add(new clGlyph("Sustain", new int[] { 111, 411, 506, 509, 610, 911, 1011 }));
+		Gvar.lstGlyph.Add(new clGlyph("Sustain all", new int[] { 102, 106, 111, 203, 304, 405, 411, 506, 509, 610, 911, 1011 }));
 		Gvar.lstGlyph.Add(new clGlyph("Technology", new int[] { 509, 610, 708, 711, 811, 911, 1011 }));
 		Gvar.lstGlyph.Add(new clGlyph("Together", new int[] { 308, 710, 711, 811, 1011 }));
 		Gvar.lstGlyph.Add(new clGlyph("Truth", new int[] { 708, 711, 811, 910, 911, 1011 }));
@@ -485,6 +487,7 @@ internal static class Lng
 	internal const string SequenceRemaining = "{0} sequences remaining";
 	internal const string SequenceGlyphOK = "Good!\r\nGlyph the rest of the sequence";
 	internal const string SequenceLose = "You lost, here is an existing sentence";
+	internal const string SequenceStartWith = "{0} sequences start with these glyphs";
 }
 
 internal class clGlyph
